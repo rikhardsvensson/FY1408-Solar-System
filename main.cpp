@@ -14,46 +14,50 @@ using namespace gui;
 int main()
 {
 	IrrlichtDevice *device =
-		createDevice( video::EDT_SOFTWARE, dimension2d<u32>(640, 480), 16,
-			false, false, false, 0);
+		createDevice(video::EDT_OPENGL, dimension2d<u32>(640, 480), 16, false, false, true, 0);
 
 	if (!device)
 		return 1;
 
-	device->setWindowCaption(L"Hello World! - Irrlicht Engine Demo");
+	device->setWindowCaption(L"Solar System");
 
 	IVideoDriver* driver = device->getVideoDriver();
 	ISceneManager* smgr = device->getSceneManager();
 	IGUIEnvironment* guienv = device->getGUIEnvironment();
 
-	guienv->addStaticText(L"Hello World! This is the Irrlicht Software renderer!",
-		rect<s32>(10,10,260,22), true);
+	IMeshSceneNode* sphere = smgr->addSphereSceneNode(25, 128, 0, 1, vector3df(0, 0, 0), vector3df(0, 0, 0), vector3df(1, 1, 1));
 
-	IAnimatedMesh* mesh = smgr->getMesh("resources/sydney.md2");
-	if (!mesh)
+	if (sphere)
 	{
-		device->drop();
-		return 1;
-	}
-	IAnimatedMeshSceneNode* node = smgr->addAnimatedMeshSceneNode( mesh );
-
-	if (node)
-	{
-		node->setMaterialFlag(EMF_LIGHTING, false);
-		node->setMD2Animation(scene::EMAT_STAND);
-		node->setMaterialTexture( 0, driver->getTexture("resources/sydney.bmp") );
+		sphere->setMaterialFlag(EMF_LIGHTING, false);
+		sphere->setMaterialTexture(0, driver->getTexture("resources/planet_textures/texture_sun.jpg"));
 	}
 
-	smgr->addCameraSceneNode(0, vector3df(0,30,-40), vector3df(0,5,0));
+	smgr->addCameraSceneNode(0, vector3df(0,30,-40), vector3df(0,0,0));
+
+	u32 frames = 0;
 
 	while(device->run())
 	{
-		driver->beginScene(true, true, SColor(255,100,101,140));
+		driver->beginScene(true, true, SColor(255,0,0,0));
+
+		sphere->setRotation(sphere->getRotation() + vector3df(0,1,0));
 
 		smgr->drawAll();
 		guienv->drawAll();
 
 		driver->endScene();
+
+		if (++frames == 100)
+		{
+			core::stringw str = L"Solar System [";
+			str += driver->getName();
+			str += L"] FPS: ";
+			str += (s32)driver->getFPS();
+
+			device->setWindowCaption(str.c_str());
+			frames = 0;
+		}
 	}
 
 	device->drop();
