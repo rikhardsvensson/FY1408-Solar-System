@@ -16,143 +16,6 @@ using namespace gui;
 
 enum IntegrationMethod { EULER, LEAPFROG, RK4 };
 
-struct SAppContext
-{
-	IrrlichtDevice *device;
-	s32             counter;
-	IGUIListBox*    listbox;
-};
-
-enum
-{
-	GUI_ID_QUIT_BUTTON = 101,
-	GUI_ID_NEW_WINDOW_BUTTON,
-	GUI_ID_FILE_OPEN_BUTTON,
-	GUI_ID_TRANSPARENCY_SCROLL_BAR
-};
-
-void setSkinTransparency(s32 alpha, irr::gui::IGUISkin * skin)
-{
-	for (s32 i = 0; i < irr::gui::EGDC_COUNT; ++i)
-	{
-		video::SColor col = skin->getColor((EGUI_DEFAULT_COLOR)i);
-		col.setAlpha(alpha);
-		skin->setColor((EGUI_DEFAULT_COLOR)i, col);
-	}
-}
-
-class MyEventReceiver : public IEventReceiver
-{
-public:
-	MyEventReceiver(SAppContext & context) : Context(context) { }
-
-	struct SMouseState
-	{
-		core::position2di Position;
-		bool LeftButtonDown;
-		SMouseState() : LeftButtonDown(false) { }
-	} MouseState;
-
-	virtual bool OnEvent(const SEvent& event)
-	{
-		if (event.EventType == irr::EET_MOUSE_INPUT_EVENT)
-		{
-			switch (event.MouseInput.Event)
-			{
-			case EMIE_LMOUSE_PRESSED_DOWN:
-				MouseState.LeftButtonDown = true;
-				break;
-
-			case EMIE_LMOUSE_LEFT_UP:
-				MouseState.LeftButtonDown = false;
-				break;
-
-			case EMIE_MOUSE_MOVED:
-				MouseState.Position.X = event.MouseInput.X;
-				MouseState.Position.Y = event.MouseInput.Y;
-				break;
-
-			default:
-				// We won't use the wheel
-				break;
-			}
-		}
-		else if (event.EventType == EET_GUI_EVENT)
-		{
-			s32 id = event.GUIEvent.Caller->getID();
-			IGUIEnvironment* env = Context.device->getGUIEnvironment();
-
-			switch (event.GUIEvent.EventType)
-			{
-			case EGET_SCROLL_BAR_CHANGED:
-				if (id == GUI_ID_TRANSPARENCY_SCROLL_BAR)
-				{
-					s32 pos = ((IGUIScrollBar*)event.GUIEvent.Caller)->getPos();
-					setSkinTransparency(pos, env->getSkin());
-				}
-				break;
-			case EGET_BUTTON_CLICKED:
-				switch (id)
-				{
-				case GUI_ID_QUIT_BUTTON:
-					Context.device->closeDevice();
-					return true;
-
-				case GUI_ID_NEW_WINDOW_BUTTON:
-				{
-					Context.listbox->addItem(L"Window created");
-					Context.counter += 30;
-					if (Context.counter > 200)
-						Context.counter = 0;
-
-					IGUIWindow* window = env->addWindow(
-						rect<s32>(100 + Context.counter, 100 + Context.counter, 300 + Context.counter, 200 + Context.counter),
-						false, // modal?
-						L"Test window");
-
-					env->addStaticText(L"Please close me",
-						rect<s32>(35, 35, 140, 50),
-						true, // border?
-						false, // wordwrap?
-						window);
-				}
-				return true;
-
-				case GUI_ID_FILE_OPEN_BUTTON:
-					Context.listbox->addItem(L"File open");
-					// There are some options for the file open dialog
-					// We set the title, make it a modal window, and make sure
-					// that the working directory is restored after the dialog
-					// is finished.
-					env->addFileOpenDialog(L"Please choose a file.", true, 0, -1, true);
-					return true;
-
-				default:
-					return false;
-				}
-				break;
-
-			case EGET_FILE_SELECTED:
-			{
-				// show the model filename, selected in the file dialog
-				IGUIFileOpenDialog* dialog =
-					(IGUIFileOpenDialog*)event.GUIEvent.Caller;
-				Context.listbox->addItem(dialog->getFileName());
-			}
-			break;
-
-			default:
-				break;
-			}
-		}
-
-		return false;
-	}
-
-private:
-	SAppContext & Context;
-};
-
 array<Body*> createBodies(IrrlichtDevice *device)
 {
 	array<Body*> bodies;
@@ -275,52 +138,10 @@ int main()
 
 	IVideoDriver* driver = device->getVideoDriver();
 	ISceneManager* smgr = device->getSceneManager();
-
-
-
-
-
 	IGUIEnvironment* guienv = device->getGUIEnvironment();
 
-	guienv->addButton(rect<s32>(10, 240, 110, 240 + 32), 0, GUI_ID_QUIT_BUTTON,
-		L"Quit", L"Exits Program");
-	guienv->addButton(rect<s32>(10, 280, 110, 280 + 32), 0, GUI_ID_NEW_WINDOW_BUTTON,
-		L"New Window", L"Launches a new Window");
-	guienv->addButton(rect<s32>(10, 320, 110, 320 + 32), 0, GUI_ID_FILE_OPEN_BUTTON,
-		L"File Open", L"Opens a file");
-	guienv->addStaticText(L"Transparent Control:", rect<s32>(150, 20, 350, 40), true);
-
-	IGUIScrollBar* scrollbar = guienv->addScrollBar(true,
-		rect<s32>(150, 45, 350, 60), 0, GUI_ID_TRANSPARENCY_SCROLL_BAR);
-	scrollbar->setMax(255);
-	scrollbar->setPos(255);
-	setSkinTransparency(scrollbar->getPos(), guienv->getSkin());
-
-	// set scrollbar position to alpha value of an arbitrary element
-	scrollbar->setPos(guienv->getSkin()->getColor(EGDC_WINDOW).getAlpha());
-
-	guienv->addStaticText(L"Logging ListBox:", rect<s32>(50, 110, 250, 130), true);
-	IGUIListBox * listbox = guienv->addListBox(rect<s32>(50, 140, 250, 210));
-	guienv->addEditBox(L"Editable Text", rect<s32>(350, 80, 550, 100));
-
-	// Store the appropriate data in a context structure.
-	SAppContext context;
-	context.device = device;
-	context.counter = 0;
-	context.listbox = listbox;
-
-	// Then create the event receiver, giving it that context structure.
-	MyEventReceiver receiver(context);
-
-	// And tell the device to use our custom event receiver.
-	device->setEventReceiver(&receiver);
-
-
-
-
-
-	int integrationMethod = RK4;
-	int timeStep = 3600;
+	int integrationMethod = LEAPFROG;
+	int timeStep = 86400;
 	bool plotOrbits = true;
 	u32 plotRadius = 50;
 	u32 plotInterval = 10;
@@ -339,9 +160,6 @@ int main()
 
 	while (device->run())
 	{
-		//u32 currentTime = timer->getTime();
-		//u32 deltaTime = currentTime - lastTime;
-
 		u32 currentTime = timer->getTime();
 
 		if (currentTime - lastUpdateTime >= 16)
