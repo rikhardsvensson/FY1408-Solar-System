@@ -4,8 +4,6 @@
 using namespace irr;
 using namespace core;
 
-#define DRAW_SCALE 1e-7
-
 class Body
 {
 public:
@@ -15,19 +13,20 @@ public:
 		double radius,
 		double mass,
 		io::path texturePath,
+		double distanceScale,
+		u32 fixedPlanetDrawSize,
 		IrrlichtDevice *device
 		);
 	~Body();
-	void update();
 	void prepareDraw();
-
+	
 	vector3d<double> position;
 	vector3d<double> velocity;
 	double mass;
 	double radius;
 
 	array<irr::scene::IMeshSceneNode*> orbitHistory;
-
+	double distanceScale;
 	stringw name;
 	irr::scene::IMeshSceneNode* sphere;
 };
